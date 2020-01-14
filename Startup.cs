@@ -22,13 +22,13 @@ namespace DRMAPI
     public class Startup
     {
         private const string CorsPolicy = "CorsPolicy";
+        public IConfiguration Configuration { get; }
 
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
         }
 
-        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -38,38 +38,26 @@ namespace DRMAPI
                 options.AddPolicy(CorsPolicy,
                     builder =>
                     {
-                        builder.WithOrigins("http://drewmccarthy.com", "https://drewmccarthy.com",
+                        /* WithOrigins("http://drewmccarthy.com", "https://drewmccarthy.com",
                             "http://www.drewmccarthy.com","https://www.drewmccarthy.com"
-                            ).AllowAnyMethod()
-                            .AllowAnyHeader();
+                            )*/
+                        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
                     });
             });
 
-/*            services.AddScoped<SmtpClient>((serviceProvider) =>
-            {
-                var config = serviceProvider.GetRequiredService<IConfiguration>();
-
-                return new SmtpClient()
-                {
-                    Host = config.GetValue<string>("Email:Smtp:Host"),
-                    Port = config.GetValue<int>("Email:Smtp:Port"),
-                    Credentials = new NetworkCredential(
-                            config.GetValue<string>("Email:Smtp:Username"),
-                            config.GetValue<string>("Email:Smtp:Password")
-                        )
-                };
-            });*/
-
             services.AddScoped<IContactService, ContactService>();
             services.AddDbContext<DRMContext>(options =>
-                options.UseNpgsql(Configuration.GetConnectionString("DRM")));
+                options.UseNpgsql(Environment.GetEnvironmentVariable("ConnectionStrings__DRM")));
             services.AddControllers();
+            
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            Uri rootUri = new Uri("https://localhost:5001/api/");
+            string domain = Configuration.GetValue<string>("Kestrel:EndPoints:HttpsDefaultCert:Url");
+
+            Uri rootUri = new Uri(domain + "/api/");
             string path = rootUri.AbsolutePath;
             if (path != "/")
             {
