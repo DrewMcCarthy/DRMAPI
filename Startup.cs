@@ -22,6 +22,9 @@ namespace DRMAPI
     public class Startup
     {
         private const string CorsPolicy = "CorsPolicy";
+        private const string DrewmccarthyComDb = "ConnectionStrings__DRM";
+        private const string TriviaDrmDb = "ConnectionStrings__TriviaDRM";
+
         public IConfiguration Configuration { get; }
 
         public Startup(IConfiguration configuration)
@@ -46,8 +49,12 @@ namespace DRMAPI
             });
 
             services.AddScoped<IContactService, ContactService>();
+            services.AddScoped<IClueService, ClueService>();
+
             services.AddDbContext<DRMContext>(options =>
-                options.UseNpgsql(Environment.GetEnvironmentVariable("ConnectionStrings__DRM")));
+                options.UseNpgsql(Environment.GetEnvironmentVariable(DrewmccarthyComDb)));
+            services.AddDbContext<TriviaDRMContext>(options =>
+                options.UseNpgsql(Environment.GetEnvironmentVariable(TriviaDrmDb)));
             services.AddControllers();
             
         }
