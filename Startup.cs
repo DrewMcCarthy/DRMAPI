@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Text;
 using System.Threading.Tasks;
 using DRMAPI.Data;
 using DRMAPI.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +18,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace DRMAPI
 {
@@ -24,6 +27,8 @@ namespace DRMAPI
         private const string CorsPolicy = "CorsPolicy";
         private const string DrewmccarthyComDb = "ConnectionStrings__DRM";
         private const string TriviaDrmDb = "ConnectionStrings__TriviaDRM";
+        private const string GroceryDrmDb = "ConnectionStrings__GroceryDRM";
+        private const string GroceryJwtSecret = "JwtSecret__GroceryDRM";
 
         public IConfiguration Configuration { get; }
 
@@ -36,6 +41,7 @@ namespace DRMAPI
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // CORS configuration
             services.AddCors(options =>
             {
                 options.AddPolicy(CorsPolicy,
@@ -48,13 +54,55 @@ namespace DRMAPI
                     });
             });
 
+
+            // JWT Configuration
+            var key = Encoding.ASCII.GetBytes(Environment.GetEnvironmentVariable(GroceryJwtSecret));
+            services.AddAuthentication(x =>
+            {
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(x =>
+            {
+                x.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
+                        var userName = context.Principal.Identity.Name;
+                        var user = userService.GetByEmail(userName);
+                        if (user == null)
+                        {
+                            // return unauthorized if user no longer exists
+                            context.Fail("Unauthorized");
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+                x.RequireHttpsMetadata = false;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false
+                };
+            });
+
+            
+            services.AddScoped<IUserService, UserService>();
             services.AddScoped<IContactService, ContactService>();
             services.AddScoped<IClueService, ClueService>();
+            services.AddScoped<IGroceryListService, GroceryListService>();
+
 
             services.AddDbContext<DRMContext>(options =>
                 options.UseNpgsql(Environment.GetEnvironmentVariable(DrewmccarthyComDb)));
             services.AddDbContext<TriviaDRMContext>(options =>
                 options.UseNpgsql(Environment.GetEnvironmentVariable(TriviaDrmDb)));
+            services.AddDbContext<GroceryContext>(options =>
+                options.UseNpgsql(Environment.GetEnvironmentVariable(GroceryDrmDb)));
             services.AddControllers();
             
         }
@@ -83,7 +131,8 @@ namespace DRMAPI
             app.UseHttpsRedirection();
             app.UseRouting();
             app.UseCors(CorsPolicy);
-            // app.UseAuthorization();
+            app.UseAuthorization();
+            app.UseAuthentication();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
