@@ -5,6 +5,8 @@ namespace DRMAPI.Services
 {
     public interface IGroceryListService
     {
-        IEnumerable<GroceryList> GetGroceryList();
+        string GetGroceryDB();
+        void UpdateGroceryList(GroceryList groceryList);
+        void AddItemToList(int listId, GroceryListItem groceryListItem);
     }
 }

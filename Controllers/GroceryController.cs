@@ -25,11 +25,40 @@ namespace DRMAPI.Controllers
         {
             try
             {
-                return Ok(_groceryListService.GetGroceryList());
+                return Ok(_groceryListService.GetGroceryDB());
             }
-            catch
+            catch(Exception e)
             {
                 return BadRequest("Oops! Couldn't get the list");
+            }
+        }
+
+        [HttpPost]
+        public IActionResult UpdateList([FromBody]GroceryList groceryList)
+        {
+            try
+            {
+                _groceryListService.UpdateGroceryList(groceryList);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest("Couldn't update the list");
+            }
+        }
+
+        [HttpPost]
+        [Route("[action]/{listId}")]
+        public IActionResult AddItemToList(int listId, [FromBody] GroceryListItem groceryListItem)
+        {
+            try
+            {
+                _groceryListService.AddItemToList(listId, groceryListItem);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest("Couldn't update the list");
             }
         }
     }

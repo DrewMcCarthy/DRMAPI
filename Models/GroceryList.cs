@@ -7,6 +7,8 @@ namespace DRMAPI.Models
 {
     public class GroceryList
     {
-        public string Item { get; set; }
+        public int ListId { get; set; }
+        public string ListName { get; set; }
+        public List<GroceryListItem> ListItems { get; set; }
     }
 }

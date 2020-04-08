@@ -10,15 +10,27 @@ namespace DRMAPI.Services
     public class GroceryListService : IGroceryListService
     {
         private GroceryContext _groceryContext;
+        private GroceryDb _groceryDb;
 
         public GroceryListService(GroceryContext groceryContext)
         {
             _groceryContext = groceryContext;
+            _groceryDb = new GroceryDb();
         }
 
-        public IEnumerable<GroceryList> GetGroceryList()
+        public string GetGroceryDB()
         {
-            return _groceryContext.GroceryList;
+            return _groceryDb.GetAppState(1);
+        }
+
+        public void UpdateGroceryList(GroceryList groceryList)
+        {
+            _groceryDb.UpdateGroceryList(groceryList);
+        }
+
+        public void AddItemToList(int listId, GroceryListItem groceryListItem)
+        {
+            _groceryDb.AddItemToList(listId, groceryListItem);
         }
     }
 }

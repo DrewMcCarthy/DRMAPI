@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
@@ -8,6 +9,8 @@ using DRMAPI.Data;
 using DRMAPI.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace DRMAPI.Services
 {
@@ -15,29 +18,29 @@ namespace DRMAPI.Services
     {
         private readonly GroceryContext _groceryContext;
         private const string GroceryJwtSecret = "JwtSecret__GroceryDRM";
+        private readonly GroceryDb _groceryDb;
 
         public UserService(GroceryContext groceryContext, IConfiguration configuration)
         {
             _groceryContext = groceryContext;
+            _groceryDb = new GroceryDb();
         }
-        
-        public User Authenticate(string email, string password)
+
+        public GroceryAppState Authenticate(string email, string password)
         {
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
                 return null;
 
-            var user = _groceryContext.Users.SingleOrDefault(x => x.Email == email);
+            var groceryAppState = JsonConvert.DeserializeObject<GroceryAppState>(_groceryDb.GetAppStateByEmail(email));
 
-            // check if user exists
-            if (user == null)
+            if (groceryAppState.User == null)
                 return null;
 
-            // check if password is correct
-            if (!VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt))
+            if (!VerifyPasswordHash(password, groceryAppState.User.PasswordHash, groceryAppState.User.PasswordSalt))
                 return null;
 
             // authentication successful
-            return user;
+            return groceryAppState;
         }
 
         public User Create(User user)

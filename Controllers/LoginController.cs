@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 
 namespace DRMAPI.Controllers
 {
@@ -31,19 +32,20 @@ namespace DRMAPI.Controllers
         [HttpPost("authenticate")]
         public IActionResult Authenticate(User user)
         {
-            var authenticatedUser = _userService.Authenticate(user.Email, user.Password);
+            var appState = _userService.Authenticate(user.Email, user.Password);
 
-            if (authenticatedUser == null)
+            if (appState.User == null)
                 return BadRequest(new { message = "Email address or password is incorrect" });
 
-            string tokenString = _userService.GetToken(authenticatedUser);
-
+            appState.User.JwtToken = _userService.GetToken(appState.User);
+            
+            // Clear sensitive fields before sending response
+            appState.User.Password = null;
+            appState.User.PasswordHash = null;
+            appState.User.PasswordSalt = null;
+            
             // return basic user info (without password) and token to store client side
-            return Ok(new
-            {
-                email = authenticatedUser.Email,
-                token = tokenString
-            });
+            return Ok(JsonConvert.SerializeObject(appState));
         }
 
 
