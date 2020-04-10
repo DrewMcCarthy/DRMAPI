@@ -1,56 +1,54 @@
-﻿using System;
+﻿using DRMAPI.Data;
+using DRMAPI.Models;
+using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using DRMAPI.Data;
-using DRMAPI.Models;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 
 namespace DRMAPI.Services
 {
-    public class UserService : IUserService
+    public class DartsUserService : IUserService
     {
-        private readonly GroceryContext _groceryContext;
-        private const string GroceryJwtSecret = "JwtSecret__GroceryDRM";
-        private readonly GroceryDb _groceryDb;
+        private readonly DartsDb _dartsDb;
+        private const string DartsJwtSecret = "JwtSecret__DartsDRM";
 
-        public UserService(GroceryContext groceryContext, IConfiguration configuration)
+        public DartsUserService()
         {
-            _groceryContext = groceryContext;
-            _groceryDb = new GroceryDb();
+            _dartsDb = new DartsDb();
         }
 
-        public User Authenticate(string email, string password)
+        public async Task<User> Authenticate(string email, string password)
         {
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
                 return null;
 
-            var groceryAppState = JsonConvert.DeserializeObject<GroceryAppState>(_groceryDb.GetAppStateByEmail(email));
+            var dartsUser = await GetUserByEmail(email);
 
-            if (groceryAppState.User == null)
+            if (dartsUser == null)
                 return null;
 
-            if (!VerifyPasswordHash(password, groceryAppState.User.PasswordHash, groceryAppState.User.PasswordSalt))
+            if (!VerifyPasswordHash(password, dartsUser.PasswordHash, dartsUser.PasswordSalt))
                 return null;
 
             // authentication successful
-            return groceryAppState.User;
+            return dartsUser;
         }
 
-        public User Create(User user)
+        public async Task<User> Create(User user)
         {
             // validation
             if (string.IsNullOrWhiteSpace(user.Password))
                 throw new Exception("Password is required");
 
-            if (_groceryContext.Users.Any(x => x.Email == user.Email))
+            if (await GetUserByEmail(user.Email) != null)
+            {
                 throw new Exception("Email address \"" + user.Email + "\" is already registered");
+            }
 
             byte[] passwordHash, passwordSalt;
             CreatePasswordHash(user.Password, out passwordHash, out passwordSalt);
@@ -58,16 +56,20 @@ namespace DRMAPI.Services
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;
 
-            _groceryContext.Users.Add(user);
-            _groceryContext.SaveChanges();
+            await _dartsDb.CreateUser(user);
 
             return user;
+        }
+
+        public async Task<User> GetUserByEmail(string email)
+        {
+            return await _dartsDb.GetUserByEmail(email);
         }
 
         public string GetToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(Environment.GetEnvironmentVariable(GroceryJwtSecret));
+            var key = Encoding.ASCII.GetBytes(Environment.GetEnvironmentVariable(DartsJwtSecret));
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new Claim[]
@@ -82,12 +84,6 @@ namespace DRMAPI.Services
             return tokenString;
         }
 
-        public User GetUserByEmail(string email)
-        {
-            return _groceryContext.Users.Find(email);
-        }
-
-        // private helper methods
         private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             if (password == null) throw new ArgumentNullException("password");

@@ -8,9 +8,9 @@ namespace DRMAPI.Services
 {
     public interface IUserService
     {
-        GroceryAppState Authenticate(string email, string password);
-        User Create(User user);
+        Task<User> Authenticate(string email, string password);
+        Task<User> Create(User user);
         string GetToken(User user);
-        User GetByEmail(string email);
+        Task<User> GetUserByEmail(string email);
     }
 }

@@ -30,6 +30,9 @@ namespace DRMAPI
         private const string GroceryDrmDb = "ConnectionStrings__GroceryDRM";
         private const string GroceryJwtSecret = "JwtSecret__GroceryDRM";
 
+        private const string DartsDrmDb = "ConnectionStrings__DartsDRM";
+        private const string DartsJwtSecret = "JwtSecret__DartsDRM";
+
         public IConfiguration Configuration { get; }
 
         public Startup(IConfiguration configuration)
@@ -56,7 +59,7 @@ namespace DRMAPI
 
 
             // JWT Configuration
-            var key = Encoding.ASCII.GetBytes(Environment.GetEnvironmentVariable(GroceryJwtSecret));
+            var dartsKey = Encoding.ASCII.GetBytes(Environment.GetEnvironmentVariable(DartsJwtSecret));
             services.AddAuthentication(x =>
             {
                 x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -70,7 +73,7 @@ namespace DRMAPI
                     {
                         var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
                         var userName = context.Principal.Identity.Name;
-                        var user = userService.GetByEmail(userName);
+                        var user = userService.GetUserByEmail(userName);
                         if (user == null)
                         {
                             // return unauthorized if user no longer exists
@@ -84,18 +87,18 @@ namespace DRMAPI
                 x.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    IssuerSigningKey = new SymmetricSecurityKey(dartsKey),
                     ValidateIssuer = false,
                     ValidateAudience = false
                 };
             });
 
-            
-            services.AddScoped<IUserService, UserService>();
+
+            services.AddScoped<IUserService, DartsUserService>();
             services.AddScoped<IContactService, ContactService>();
             services.AddScoped<IClueService, ClueService>();
             services.AddScoped<IGroceryListService, GroceryListService>();
-
+            
 
             services.AddDbContext<DRMContext>(options =>
                 options.UseNpgsql(Environment.GetEnvironmentVariable(DrewmccarthyComDb)));
@@ -103,6 +106,8 @@ namespace DRMAPI
                 options.UseNpgsql(Environment.GetEnvironmentVariable(TriviaDrmDb)));
             services.AddDbContext<GroceryContext>(options =>
                 options.UseNpgsql(Environment.GetEnvironmentVariable(GroceryDrmDb)));
+            services.AddDbContext<GroceryContext>(options =>
+                options.UseNpgsql(Environment.GetEnvironmentVariable(DartsDrmDb)));
             services.AddControllers();
             
         }
