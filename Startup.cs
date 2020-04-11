@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
+using DRMAPI.ClientComm;
 using DRMAPI.Data;
 using DRMAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -44,21 +45,23 @@ namespace DRMAPI
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
             // CORS configuration
             services.AddCors(options =>
             {
                 options.AddPolicy(CorsPolicy,
                     builder =>
                     {
-                        /* WithOrigins("http://drewmccarthy.com", "https://drewmccarthy.com",
-                            "http://www.drewmccarthy.com","https://www.drewmccarthy.com"
-                            )*/
-                        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                        builder
+                        .WithOrigins("http://drewmccarthy.com", "https://localhost:3000")
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials();
                     });
             });
 
 
-            // JWT Configuration
+            #region JWT Configuration
             var dartsKey = Encoding.ASCII.GetBytes(Environment.GetEnvironmentVariable(DartsJwtSecret));
             services.AddAuthentication(x =>
             {
@@ -92,13 +95,14 @@ namespace DRMAPI
                     ValidateAudience = false
                 };
             });
+            #endregion
 
-
+            #region DI Services
             services.AddScoped<IUserService, DartsUserService>();
             services.AddScoped<IContactService, ContactService>();
             services.AddScoped<IClueService, ClueService>();
             services.AddScoped<IGroceryListService, GroceryListService>();
-            
+            #endregion
 
             services.AddDbContext<DRMContext>(options =>
                 options.UseNpgsql(Environment.GetEnvironmentVariable(DrewmccarthyComDb)));
@@ -108,8 +112,9 @@ namespace DRMAPI
                 options.UseNpgsql(Environment.GetEnvironmentVariable(GroceryDrmDb)));
             services.AddDbContext<GroceryContext>(options =>
                 options.UseNpgsql(Environment.GetEnvironmentVariable(DartsDrmDb)));
+
             services.AddControllers();
-            
+            services.AddSignalR();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -141,6 +146,7 @@ namespace DRMAPI
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHub<DartsHub>("/dartsHub");
             });
         }
     }
