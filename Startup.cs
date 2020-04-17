@@ -28,8 +28,6 @@ namespace DRMAPI
         private const string CorsPolicy = "CorsPolicy";
         private const string DrewmccarthyComDb = "ConnectionStrings__DRM";
         private const string TriviaDrmDb = "ConnectionStrings__TriviaDRM";
-        private const string GroceryDrmDb = "ConnectionStrings__GroceryDRM";
-        private const string GroceryJwtSecret = "JwtSecret__GroceryDRM";
 
         private const string DartsDrmDb = "ConnectionStrings__DartsDRM";
         private const string DartsJwtSecret = "JwtSecret__DartsDRM";
@@ -101,7 +99,6 @@ namespace DRMAPI
             services.AddScoped<IUserService, DartsUserService>();
             services.AddScoped<IContactService, ContactService>();
             services.AddScoped<IClueService, ClueService>();
-            services.AddScoped<IGroceryListService, GroceryListService>();
             services.AddSingleton<DartsService>();
             #endregion
 
@@ -109,10 +106,6 @@ namespace DRMAPI
                 options.UseNpgsql(Environment.GetEnvironmentVariable(DrewmccarthyComDb)));
             services.AddDbContext<TriviaDRMContext>(options =>
                 options.UseNpgsql(Environment.GetEnvironmentVariable(TriviaDrmDb)));
-            services.AddDbContext<GroceryContext>(options =>
-                options.UseNpgsql(Environment.GetEnvironmentVariable(GroceryDrmDb)));
-            services.AddDbContext<GroceryContext>(options =>
-                options.UseNpgsql(Environment.GetEnvironmentVariable(DartsDrmDb)));
 
             services.AddControllers();
             services.AddSignalR();
