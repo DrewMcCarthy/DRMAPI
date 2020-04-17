@@ -102,6 +102,7 @@ namespace DRMAPI
             services.AddScoped<IContactService, ContactService>();
             services.AddScoped<IClueService, ClueService>();
             services.AddScoped<IGroceryListService, GroceryListService>();
+            services.AddSingleton<DartsService>();
             #endregion
 
             services.AddDbContext<DRMContext>(options =>
@@ -141,8 +142,8 @@ namespace DRMAPI
             app.UseHttpsRedirection();
             app.UseRouting();
             app.UseCors(CorsPolicy);
-            app.UseAuthorization();
             app.UseAuthentication();
+            app.UseAuthorization();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();

@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using DRMAPI.Models.Darts;
+using Microsoft.AspNetCore.SignalR;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,23 +20,32 @@ namespace DRMAPI.ClientComm
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, "Lobby");
         }
 
-        public async Task JoinGame(int gameId)
+        public async Task AddGameToLobby(string lobbyGame)
         {
-            var gameRoom = "Game" + gameId;
-            await LeaveLobby();
-            await Groups.AddToGroupAsync(Context.ConnectionId, gameRoom);
+            await Clients.OthersInGroup("Lobby").SendAsync("addGameToLobby", lobbyGame);
         }
 
-        public async Task LeaveGame(int gameId)
+        public async Task JoinGame(string gameId, string userId, string username)
         {
-            var gameRoom = "Game" + gameId;
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, gameRoom);
+            await LeaveLobby();
+            await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
+            await Clients.OthersInGroup(gameId).SendAsync("joinGame", userId, username);
+        }
+
+        public async Task LeaveGame(string gameId)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, gameId);
             await JoinLobby();
         }
 
-        public void SendToAll(string username, string message)
+        public async Task SendToAll(string username, string message)
         {
-            Clients.All.SendAsync("sendToAll", username, message);
+            await Clients.All.SendAsync("sendToAll", username, message);
+        }
+
+        public async Task SendPlayerAction(int gameId, string playerAction)
+        {
+            await Clients.OthersInGroup(gameId.ToString()).SendAsync("sendPlayerAction", gameId.ToString(), playerAction);
         }
 
     }

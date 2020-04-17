@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DRMAPI.Models;
+using DRMAPI.Models.Darts;
 using DRMAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -17,10 +18,12 @@ namespace DRMAPI.Controllers
     public class DartsController : ControllerBase
     {
         private IUserService _userService;
+        private DartsService _dartsService;
 
-        public DartsController(IUserService userService)
+        public DartsController(IUserService userService, DartsService dartsService)
         {
             _userService = userService;
+            _dartsService = dartsService;
         }
 
         [AllowAnonymous]
@@ -43,21 +46,73 @@ namespace DRMAPI.Controllers
             return Ok(JsonConvert.SerializeObject(authenticatedUser));
         }
 
-
         [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register(User user)
         {
             try
             {
-                await _userService.Create(user);
-                return Ok();
+                var createdUser = await _userService.Create(user);
+                createdUser.JwtToken = _userService.GetToken(user);
+                return Ok(JsonConvert.SerializeObject(createdUser));
             }
             catch (Exception ex)
             {
                 // return error message if there was an exception
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        [HttpGet("options")]
+        public IActionResult GetGameOptions()
+        {
+            try
+            {
+                var gameOptions = _dartsService.GameOptions;
+                return Ok(gameOptions.Serialize());
+            }
+            catch (Exception ex)
+            {
+                // return error message if there was an exception
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("lobby")]
+        public async Task<IActionResult> GetLobbyGames()
+        {
+            try
+            {
+                var lobbyGames = await _dartsService.GetLobbyGames();
+                return Ok(JsonConvert.SerializeObject(lobbyGames));
+            }
+            catch (Exception ex)
+            {
+                // return error message if there was an exception
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("game/{gameId}")]
+        public async Task<IActionResult> GetGame(int gameId)
+        {
+            try
+            {
+                var user = await _dartsService.GetLobbyGameById(gameId);
+                return Ok(JsonConvert.SerializeObject(user));
+            }
+            catch (Exception ex)
+            {
+                // return error message if there was an exception
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("creategame")]
+        public async Task<IActionResult> CreateGame([FromBody] Game game)
+        {
+            var newGameId = await _dartsService.CreateGame(game);
+            return Ok(newGameId);
         }
     }
 }

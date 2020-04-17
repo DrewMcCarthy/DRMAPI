@@ -1,4 +1,5 @@
 ﻿using DRMAPI.Models;
+using DRMAPI.Models.Darts;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,8 @@ namespace DRMAPI.Data
     {
         private string _connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DartsDRM");
 
+        // Used for authentication
+        // Needs to return password related values
         public async Task<User> GetUserByEmail(string emailAddress)
         {
             await using var conn = new NpgsqlConnection(_connectionString);
@@ -37,6 +40,113 @@ namespace DRMAPI.Data
             return null;
         }
 
+        // Used for game info. Don't return sensitive info
+        public async Task<LobbyGame> GetLobbyGameById(int gameId)
+        {
+            LobbyGame lobbyGame = new LobbyGame();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using (var cmd = new NpgsqlCommand(@"
+                SELECT g.id, gt.name as game_type, gv.name as game_variation, 
+                    u.username as created_by, g.created_by_user_id, g.created_timestamp, gv.start_score
+                from public.games g
+                join public.game_types gt on g.game_type_id = gt.id
+                join public.game_variations gv on g.game_variation_id = gv.id
+                join public.users u on g.created_by_user_id = u.user_id
+                WHERE g.id = @gameId", conn))
+            {
+                cmd.Parameters.AddWithValue("gameId", gameId);
+                await using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    int colIdx = 0;
+                    lobbyGame.Id = reader.GetInt32(colIdx++);
+                    lobbyGame.GameType = reader.GetString(colIdx++);
+                    lobbyGame.GameVariation = reader.GetString(colIdx++);
+                    lobbyGame.CreatedBy = reader.GetString(colIdx++);
+                    lobbyGame.CreatedByUserId = reader.GetInt32(colIdx++);
+                    lobbyGame.CreatedTimestamp = reader.GetDateTime(colIdx++);
+                    lobbyGame.StartScore = reader.GetInt32(colIdx++);
+                }
+            }
+            return lobbyGame;
+        }
+
+        public async Task<List<LobbyGame>> GetLobbyGames()
+        {
+            var lobbyGames = new List<LobbyGame>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using (var cmd = new NpgsqlCommand(@"
+                select g.id, gt.name as game_type, gv.name as game_variation, 
+                    u.username as created_by, g.created_by_user_id, g.created_timestamp
+                from public.games g
+                join public.game_types gt on g.game_type_id = gt.id
+                join public.game_variations gv on g.game_variation_id = gv.id
+                join public.users u on g.created_by_user_id = u.user_id
+                order by g.created_timestamp desc", conn))
+            {
+                await using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var lobbyGame = new LobbyGame();
+                    
+                    int colIdx = 0;
+                    lobbyGame.Id = reader.GetInt32(colIdx++);
+                    lobbyGame.GameType = reader.GetString(colIdx++);
+                    lobbyGame.GameVariation = reader.GetString(colIdx++);
+                    lobbyGame.CreatedBy = reader.GetString(colIdx++);
+                    lobbyGame.CreatedByUserId = reader.GetInt32(colIdx++);
+                    lobbyGame.CreatedTimestamp = reader.GetDateTime(colIdx++);
+                    
+                    lobbyGames.Add(lobbyGame);
+                }
+            }
+            return lobbyGames;
+        }
+
+        public GameOptions GetGameOptions()
+        {
+            var gameOptions = new GameOptions();
+
+            using var conn = new NpgsqlConnection(_connectionString);
+            conn.Open();
+            // GameTypes
+            using (var gameTypeCmd = new NpgsqlCommand(@"
+                SELECT id, name 
+                FROM public.game_types", conn))
+            {
+                using var reader = gameTypeCmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    var gameType = new GameType();
+                    int colIdx = 0;
+                    gameType.Id = reader.GetInt32(colIdx++);
+                    gameType.Name = reader.GetString(colIdx++);
+                    gameOptions.GameTypes.Add(gameType);
+                }
+            }
+            // GameVariations
+            using (var gameVarCmd = new NpgsqlCommand(@"
+                SELECT id, game_type_id, name, start_score
+                FROM public.game_variations", conn))
+            {
+                using var reader = gameVarCmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    var gameVariation = new GameVariation();
+                    int colIdx = 0;
+                    gameVariation.Id = reader.GetInt32(colIdx++);
+                    gameVariation.GameTypeId = reader.GetInt32(colIdx++);
+                    gameVariation.Name = reader.GetString(colIdx++);
+                    gameVariation.StartScore = reader.GetInt32(colIdx++);
+                    gameOptions.GameVariations.Add(gameVariation);
+                }
+            }
+
+            return gameOptions;
+        }
+
         public async Task CreateUser(User user)
         {
             await using var conn = new NpgsqlConnection(_connectionString);
@@ -52,5 +162,46 @@ namespace DRMAPI.Data
                 await cmd.ExecuteNonQueryAsync();
             }
         }
+
+        //public async Task CreateGame(Game game)
+        //{
+        //    await using var conn = new NpgsqlConnection(_connectionString);
+        //    await conn.OpenAsync();
+        //    await using (var cmd = new NpgsqlCommand(@"
+        //        INSERT INTO public.games(game_type_id, game_variation_id, created_by_user_id, status) 
+        //        VALUES(@gameTypeId, @gameVariationId, @createdByUserId, @status)", conn))
+        //    {
+        //        cmd.Parameters.AddWithValue("gameTypeId", game.GameTypeId);
+        //        cmd.Parameters.AddWithValue("gameVariationId", game.GameVariationId);
+        //        cmd.Parameters.AddWithValue("createdByUserId", game.CreatedByUserId);
+        //        cmd.Parameters.AddWithValue("status", game.Status);
+        //        await cmd.ExecuteNonQueryAsync();
+        //    }
+        //}
+
+        public async Task<int> CreateGame(Game game)
+        {
+            int newGameId = 0;
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using (var cmd = new NpgsqlCommand(@"
+                INSERT INTO public.games(game_type_id, game_variation_id, created_by_user_id, status) 
+                VALUES(@gameTypeId, @gameVariationId, @createdByUserId, @status) returning id", conn))
+            {
+                cmd.Parameters.AddWithValue("gameTypeId", game.GameTypeId);
+                cmd.Parameters.AddWithValue("gameVariationId", game.GameVariationId);
+                cmd.Parameters.AddWithValue("createdByUserId", game.CreatedByUserId);
+                cmd.Parameters.AddWithValue("status", game.Status);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    int colIdx = 0;
+                    newGameId = reader.GetInt32(colIdx++);
+                }
+            }
+            return newGameId;
+        }
+
     }
 }
