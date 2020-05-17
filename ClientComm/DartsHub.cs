@@ -10,31 +10,33 @@ namespace DRMAPI.ClientComm
 {
     public class DartsHub : Hub
     {
+        public static readonly string Lobby = "Lobby";
+
         public async Task JoinLobby()
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, "Lobby");
+            await Groups.AddToGroupAsync(Context.ConnectionId, Lobby);
         }
 
         public async Task LeaveLobby()
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, "Lobby");
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, Lobby);
         }
 
         public async Task AddGameToLobby(string lobbyGame)
         {
-            await Clients.OthersInGroup("Lobby").SendAsync("addGameToLobby", lobbyGame);
+            await Clients.OthersInGroup(Lobby).SendAsync("addGameToLobby", lobbyGame);
         }
 
-        public async Task JoinGame(string gameId, string userId, string username)
+        public async Task JoinGame(int gameId, int userId, string username)
         {
             await LeaveLobby();
-            await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
-            await Clients.OthersInGroup(gameId).SendAsync("joinGame", userId, username);
+            await Groups.AddToGroupAsync(Context.ConnectionId, gameId.ToString());
+            await Clients.OthersInGroup(gameId.ToString()).SendAsync("joinGame", userId, username);
         }
 
-        public async Task LeaveGame(string gameId)
+        public async Task LeaveGame(int gameId)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, gameId);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, gameId.ToString());
             await JoinLobby();
         }
 

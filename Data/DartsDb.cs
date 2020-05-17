@@ -111,6 +111,7 @@ namespace DRMAPI.Data
 
             using var conn = new NpgsqlConnection(_connectionString);
             conn.Open();
+
             // GameTypes
             using (var gameTypeCmd = new NpgsqlCommand(@"
                 SELECT id, name 
@@ -141,6 +142,24 @@ namespace DRMAPI.Data
                     gameVariation.Name = reader.GetString(colIdx++);
                     gameVariation.StartScore = reader.GetInt32(colIdx++);
                     gameOptions.GameVariations.Add(gameVariation);
+                }
+            }
+
+            // GameSettings
+            using (var gameSetCmd = new NpgsqlCommand(@"
+                SELECT id, game_type_id, category, name
+                FROM public.game_settings", conn))
+            {
+                using var reader = gameSetCmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    var gameSetting = new GameSetting();
+                    int colIdx = 0;
+                    gameSetting.Id = reader.GetInt32(colIdx++);
+                    gameSetting.GameTypeId = reader.GetInt32(colIdx++);
+                    gameSetting.Category = reader.GetString(colIdx++);
+                    gameSetting.Name = reader.GetString(colIdx++);
+                    gameOptions.GameSettings.Add(gameSetting);
                 }
             }
 
@@ -201,6 +220,31 @@ namespace DRMAPI.Data
                 }
             }
             return newGameId;
+        }
+
+        public List<Tuple<string, string, int>> GetSharedCodes()
+        {
+            var codes = new List<Tuple<string, string, int>>();
+            using var conn = new NpgsqlConnection(_connectionString);
+            conn.Open();
+            using (var cmd = new NpgsqlCommand(@"
+                SELECT code_type, key, value
+                FROM public.shared_codes", conn))
+            {
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    // Tuple<string, string, int> code;
+                    int colIdx = 0;
+                    var code = new Tuple<string, string, int>(
+                        reader.GetString(colIdx++),
+                        reader.GetString(colIdx++), 
+                        reader.GetInt32(colIdx++));
+
+                    codes.Add(code);
+                }
+            }
+            return codes;
         }
 
     }

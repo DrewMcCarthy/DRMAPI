@@ -19,11 +19,13 @@ namespace DRMAPI.Controllers
     {
         private IUserService _userService;
         private DartsService _dartsService;
+        private SharedCodes _sharedCodes;
 
-        public DartsController(IUserService userService, DartsService dartsService)
+        public DartsController(IUserService userService, DartsService dartsService, SharedCodes sharedCodes)
         {
             _userService = userService;
             _dartsService = dartsService;
+            _sharedCodes = sharedCodes;
         }
 
         [AllowAnonymous]
@@ -37,13 +39,8 @@ namespace DRMAPI.Controllers
 
             authenticatedUser.JwtToken = _userService.GetToken(user);
 
-            // Clear sensitive fields before sending response
-            authenticatedUser.Password = null;
-            authenticatedUser.PasswordHash = null;
-            authenticatedUser.PasswordSalt = null;
-
             // return basic user info (without password) and token to store client side
-            return Ok(JsonConvert.SerializeObject(authenticatedUser));
+            return Ok(new UserDto(authenticatedUser));
         }
 
         [AllowAnonymous]
@@ -54,7 +51,7 @@ namespace DRMAPI.Controllers
             {
                 var createdUser = await _userService.Create(user);
                 createdUser.JwtToken = _userService.GetToken(user);
-                return Ok(JsonConvert.SerializeObject(createdUser));
+                return Ok(new UserDto(createdUser));
             }
             catch (Exception ex)
             {
@@ -84,7 +81,7 @@ namespace DRMAPI.Controllers
             try
             {
                 var lobbyGames = await _dartsService.GetLobbyGames();
-                return Ok(JsonConvert.SerializeObject(lobbyGames));
+                return Ok(lobbyGames);
             }
             catch (Exception ex)
             {
@@ -99,7 +96,7 @@ namespace DRMAPI.Controllers
             try
             {
                 var user = await _dartsService.GetLobbyGameById(gameId);
-                return Ok(JsonConvert.SerializeObject(user));
+                return Ok(user);
             }
             catch (Exception ex)
             {
@@ -113,6 +110,13 @@ namespace DRMAPI.Controllers
         {
             var newGameId = await _dartsService.CreateGame(game);
             return Ok(newGameId);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("testcodes")]
+        public IActionResult TestCodes()
+        {
+            return Ok(_sharedCodes.GameStatus);
         }
     }
 }

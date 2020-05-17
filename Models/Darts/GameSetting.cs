@@ -8,9 +8,11 @@ using System.Threading.Tasks;
 namespace DRMAPI.Models.Darts
 {
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
-    public class GameType
+    public class GameSetting
     {
         public int Id { get; set; }
+        public int GameTypeId { get; set; }
+        public string Category { get; set; }
         public string Name { get; set; }
     }
 }

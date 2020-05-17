@@ -24,6 +24,11 @@ namespace DRMAPI.Services
             GameOptions = _dartsDb.GetGameOptions();
         }
 
+        public List<Tuple<string, string, int>> GetSharedCodes()
+        {
+            return _dartsDb.GetSharedCodes();
+        }
+
         public async Task<int> CreateGame(Game game)
         {
             return await _dartsDb.CreateGame(game);

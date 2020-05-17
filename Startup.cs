@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DRMAPI.ClientComm;
 using DRMAPI.Data;
+using DRMAPI.Models.Darts;
 using DRMAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -20,6 +21,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace DRMAPI
 {
@@ -51,7 +54,7 @@ namespace DRMAPI
                     builder =>
                     {
                         builder
-                        .WithOrigins("http://drewmccarthy.com", "https://localhost:3000")
+                        .WithOrigins("http://drewmccarthy.com", "https://drewmccarthy.com", "https://localhost:3000", "http://localhost:3000")
                         .AllowAnyMethod()
                         .AllowAnyHeader()
                         .AllowCredentials();
@@ -100,6 +103,7 @@ namespace DRMAPI
             services.AddScoped<IContactService, ContactService>();
             services.AddScoped<IClueService, ClueService>();
             services.AddSingleton<DartsService>();
+            services.AddSingleton<SharedCodes>();
             #endregion
 
             services.AddDbContext<DRMContext>(options =>
