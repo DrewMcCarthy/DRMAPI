@@ -95,8 +95,8 @@ namespace DRMAPI.Controllers
         {
             try
             {
-                var user = await _dartsService.GetLobbyGameById(gameId);
-                return Ok(user);
+                var lobbyGame = await _dartsService.GetLobbyGameById(gameId);
+                return Ok(lobbyGame);
             }
             catch (Exception ex)
             {

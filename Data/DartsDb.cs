@@ -47,11 +47,14 @@ namespace DRMAPI.Data
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
             await using (var cmd = new NpgsqlCommand(@"
-                SELECT g.id, gt.name as game_type, gv.name as game_variation, 
-                    u.username as created_by, g.created_by_user_id, g.created_timestamp, gv.start_score
+                SELECT g.id, gt.id as game_type_id, gt.name as game_type_name, gv.id as game_variation_id, 
+                    gv.name as game_variation_name, gv.game_type_id as game_variation_game_type_id, gv.start_score,
+                    gs.id as game_setting_id, gs.name as game_setting, gs.game_type_id as gs_game_type_id, gs.category as gs_category,
+                    u.username as created_by, g.created_by_user_id, g.created_timestamp 
                 from public.games g
                 join public.game_types gt on g.game_type_id = gt.id
                 join public.game_variations gv on g.game_variation_id = gv.id
+                join public.game_settings gs on g.game_setting_id = gs.id
                 join public.users u on g.created_by_user_id = u.user_id
                 WHERE g.id = @gameId", conn))
             {
@@ -61,12 +64,20 @@ namespace DRMAPI.Data
                 {
                     int colIdx = 0;
                     lobbyGame.Id = reader.GetInt32(colIdx++);
-                    lobbyGame.GameType = reader.GetString(colIdx++);
-                    lobbyGame.GameVariation = reader.GetString(colIdx++);
+                    lobbyGame.GameType.Id = reader.GetInt32(colIdx++);
+                    lobbyGame.GameType.Name = reader.GetString(colIdx++);
+                    lobbyGame.GameVariation.Id = reader.GetInt32(colIdx++);
+                    lobbyGame.GameVariation.Name = reader.GetString(colIdx++);
+                    lobbyGame.GameVariation.GameTypeId = reader.GetInt32(colIdx++);
+                    lobbyGame.GameVariation.StartScore = reader.GetInt32(colIdx++);
+                    lobbyGame.GameSetting.Id = reader.GetInt32(colIdx++);
+                    lobbyGame.GameSetting.Name = reader.GetString(colIdx++);
+                    lobbyGame.GameSetting.GameTypeId = reader.GetInt32(colIdx++);
+                    lobbyGame.GameSetting.Category = reader.GetString(colIdx++);
                     lobbyGame.CreatedBy = reader.GetString(colIdx++);
                     lobbyGame.CreatedByUserId = reader.GetInt32(colIdx++);
                     lobbyGame.CreatedTimestamp = reader.GetDateTime(colIdx++);
-                    lobbyGame.StartScore = reader.GetInt32(colIdx++);
+                    lobbyGame.StartScore = lobbyGame.GameVariation.StartScore;
                 }
             }
             return lobbyGame;
@@ -78,11 +89,14 @@ namespace DRMAPI.Data
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
             await using (var cmd = new NpgsqlCommand(@"
-                select g.id, gt.name as game_type, gv.name as game_variation, 
-                    u.username as created_by, g.created_by_user_id, g.created_timestamp
+                SELECT g.id, gt.id as game_type_id, gt.name as game_type_name, gv.id as game_variation_id, 
+                    gv.name as game_variation_name, gv.game_type_id as game_variation_game_type_id, gv.start_score,
+                    gs.id as game_setting_id, gs.name as game_setting, gs.game_type_id as gs_game_type_id, gs.category as gs_category,
+                    u.username as created_by, g.created_by_user_id, g.created_timestamp 
                 from public.games g
                 join public.game_types gt on g.game_type_id = gt.id
                 join public.game_variations gv on g.game_variation_id = gv.id
+                join public.game_settings gs on g.game_setting_id = gs.id
                 join public.users u on g.created_by_user_id = u.user_id
                 order by g.created_timestamp desc", conn))
             {
@@ -90,15 +104,23 @@ namespace DRMAPI.Data
                 while (await reader.ReadAsync())
                 {
                     var lobbyGame = new LobbyGame();
-                    
+
                     int colIdx = 0;
                     lobbyGame.Id = reader.GetInt32(colIdx++);
-                    lobbyGame.GameType = reader.GetString(colIdx++);
-                    lobbyGame.GameVariation = reader.GetString(colIdx++);
+                    lobbyGame.GameType.Id = reader.GetInt32(colIdx++);
+                    lobbyGame.GameType.Name = reader.GetString(colIdx++);
+                    lobbyGame.GameVariation.Id = reader.GetInt32(colIdx++);
+                    lobbyGame.GameVariation.Name = reader.GetString(colIdx++);
+                    lobbyGame.GameVariation.GameTypeId = reader.GetInt32(colIdx++);
+                    lobbyGame.GameVariation.StartScore = reader.GetInt32(colIdx++);
+                    lobbyGame.GameSetting.Id = reader.GetInt32(colIdx++);
+                    lobbyGame.GameSetting.Name = reader.GetString(colIdx++);
+                    lobbyGame.GameSetting.GameTypeId = reader.GetInt32(colIdx++);
+                    lobbyGame.GameSetting.Category = reader.GetString(colIdx++);
                     lobbyGame.CreatedBy = reader.GetString(colIdx++);
                     lobbyGame.CreatedByUserId = reader.GetInt32(colIdx++);
                     lobbyGame.CreatedTimestamp = reader.GetDateTime(colIdx++);
-                    
+
                     lobbyGames.Add(lobbyGame);
                 }
             }
@@ -205,11 +227,12 @@ namespace DRMAPI.Data
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
             await using (var cmd = new NpgsqlCommand(@"
-                INSERT INTO public.games(game_type_id, game_variation_id, created_by_user_id, status) 
-                VALUES(@gameTypeId, @gameVariationId, @createdByUserId, @status) returning id", conn))
+                INSERT INTO public.games(game_type_id, game_variation_id, game_setting_id, created_by_user_id, status) 
+                VALUES(@gameTypeId, @gameVariationId, @gameSettingId, @createdByUserId, @status) returning id", conn))
             {
                 cmd.Parameters.AddWithValue("gameTypeId", game.GameTypeId);
                 cmd.Parameters.AddWithValue("gameVariationId", game.GameVariationId);
+                cmd.Parameters.AddWithValue("gameSettingId", game.GameSettingId);
                 cmd.Parameters.AddWithValue("createdByUserId", game.CreatedByUserId);
                 cmd.Parameters.AddWithValue("status", game.Status);
                 using var reader = await cmd.ExecuteReaderAsync();

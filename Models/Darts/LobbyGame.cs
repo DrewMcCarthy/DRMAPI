@@ -8,12 +8,12 @@ namespace DRMAPI.Models.Darts
     public class LobbyGame
     {
         public int Id { get; set; }
-        public string GameType { get; set; }
-        public string GameVariation { get; set; }
+        public GameType GameType { get; set; } = new GameType();
+        public GameVariation GameVariation { get; set; } = new GameVariation();
+        public GameSetting GameSetting { get; set; } = new GameSetting();
         public string CreatedBy { get; set; }
         public int CreatedByUserId { get; set; }
         public DateTime CreatedTimestamp { get; set; }
         public int StartScore { get; set; }
-
     }
 }

@@ -10,6 +10,7 @@ namespace DRMAPI.Models.Darts
         public int Id { get; set; }
         public int GameTypeId { get; set; }
         public int GameVariationId { get; set; }
+        public int GameSettingId { get; set; }
         public int CreatedByUserId { get; set; }
         public string Status { get; set; }
     }
